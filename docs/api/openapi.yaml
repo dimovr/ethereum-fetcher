@@ -1,0 +1,191 @@
+openapi: 3.0.0
+info:
+  title: Ethereum Transaction Fetcher API
+  version: '1.0'
+  description: REST API for fetching Ethereum transaction details with authentication
+
+servers:
+  - url: http://localhost:{port}
+    variables:
+      port:
+        default: '8080'
+
+paths:
+  /lime/authenticate:
+    post:
+      summary: Authenticate user and generate JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthenticationRequest'
+      responses:
+        '200':
+          description: Successful authentication
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationResponse'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid credentials"
+
+  /lime/eth:
+    get:
+      summary: Fetch Ethereum transactions by hash
+      parameters:
+        - $ref: '#/components/parameters/TransactionHashes'
+        - $ref: '#/components/parameters/AuthToken'
+      responses:
+        '200':
+          description: Successful transaction fetch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+
+  /lime/eth/{rlphex}:
+    get:
+      summary: Fetch Ethereum transactions using RLP-encoded transaction hashes
+      parameters:
+        - name: rlphex
+          in: path
+          required: true
+          schema:
+            type: string
+            description: Hexadecimal representation of RLP encoded list of transaction hashes
+        - $ref: '#/components/parameters/AuthToken'
+      responses:
+        '200':
+          description: Successful transaction fetch using RLP-encoded hashes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '400':
+          description: Invalid RLP encoding or transaction hashes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /lime/all:
+    get:
+      summary: Fetch all saved transactions
+      parameters:
+        - $ref: '#/components/parameters/AuthToken'
+      responses:
+        '200':
+          description: List of all saved transactions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+
+  /lime/my:
+    get:
+      summary: Fetch transactions for the authenticated user
+      parameters:
+        - $ref: '#/components/parameters/AuthToken'
+      responses:
+        '200':
+          description: List of transactions for the authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Authentication token required"
+
+components:
+  parameters:
+    TransactionHashes:
+      name: transactionHashes
+      in: query
+      required: true
+      schema:
+        type: array
+        items:
+          type: string
+
+    AuthToken:
+      name: AUTH_TOKEN
+      in: header
+      required: false
+      schema:
+        type: string
+        description: JWT authentication token
+
+  schemas:
+    AuthenticationRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: "alice"
+        password:
+          type: string
+          example: "alice"
+
+    AuthenticationResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT authentication token
+
+    TransactionResponse:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+
+    Transaction:
+      type: object
+      properties:
+        transactionHash:
+          type: string
+        transactionStatus:
+          type: integer
+        blockHash:
+          type: string
+        blockNumber:
+          type: integer
+        from:
+          type: string
+        to:
+          type: string
+          nullable: true
+        contractAddress:
+          type: string
+          nullable: true
+        logsCount:
+          type: integer
+        input:
+          type: string
+        value:
+          type: string
